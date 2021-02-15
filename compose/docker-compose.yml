@@ -19,12 +19,24 @@ services:
       - appdata:/var/www/html
       - sockdata:/sock
       - ssldata:/etc/nginx/certs
+    healthcheck:
+      test: 'curl --fail http://127.0.0.1:8000'
+    depends_on:
+      phpfpm:
+        condition: service_started
 
   phpfpm:
     image: markoshust/magento-php:7.4-fpm-4
     links:
       - db
     volumes: *appvolumes
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
 
   db:
     image: percona:5.7
@@ -34,9 +46,13 @@ services:
     env_file: env/db.env
     volumes:
       - dbdata:/var/lib/mysql
+    healthcheck:
+      test: 'mysqladmin ping -h localhost -u root -pmagento'
 
   redis:
     image: redis:5.0-alpine
+    healthcheck:
+      test: 'redis-cli ping || exit 1'
 
   elasticsearch:
     image: markoshust/magento-elasticsearch:7.7.1-0
@@ -54,6 +70,8 @@ services:
       - "5672:5672"
     volumes:
       - rabbitmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: 'rabbitmq-diagnostics -q ping'
 
   # Disabling cron by default as it uses higher CPU, enable if needed
   #cron:

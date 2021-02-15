@@ -37,6 +37,8 @@ services:
     ports:
       - "1025"
       - "8025:8025"
+    healthcheck:
+      test: 'wget --no-verbose --tries=1 --spider http://localhost:8025 || exit 1'
 
   # Disabling cron by default as it uses higher CPU, enable if needed
   #cron:
